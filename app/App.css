@@ -471,3 +471,8 @@ footer {
   font-weight: bold;
   text-align: center;
 }
+
+/* Ensure Vercel Analytics doesn't interfere with layout */
+script[src^="/_vercel/insights/script.js"] {
+  display: none !important;
+}

@@ -1,5 +1,5 @@
+import '@/app/app.css'
 import { Analytics } from '@vercel/analytics/react'
-import './app.css'  // Assuming you want to keep your global styles
 
 export default function RootLayout({
   children,
