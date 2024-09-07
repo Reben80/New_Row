@@ -7,9 +7,13 @@ interface ChallengeModalProps {
   timeLeft: number;
   challengeScore: number;
   isActive: boolean;
+  isCompleted: boolean;  // New prop
+  totalQuestions: number;  // New prop
 }
 
-const ChallengeModal: React.FC<ChallengeModalProps> = ({ isOpen, onClose, onStart, timeLeft, challengeScore, isActive }) => {
+const ChallengeModal: React.FC<ChallengeModalProps> = ({ 
+  isOpen, onClose, onStart, timeLeft, challengeScore, isActive, isCompleted, totalQuestions 
+}) => {
   const [selectedDuration, setSelectedDuration] = useState<number>(60);
 
   if (!isOpen) return null;
@@ -23,7 +27,7 @@ const ChallengeModal: React.FC<ChallengeModalProps> = ({ isOpen, onClose, onStar
     <div className="modal-overlay">
       <div className="modal-content">
         <h2>Challenge Mode</h2>
-        {!isActive ? (
+        {!isActive && !isCompleted ? (
           <>
             <p>Select challenge duration:</p>
             <select value={selectedDuration} onChange={(e) => setSelectedDuration(Number(e.target.value))}>
@@ -35,13 +39,21 @@ const ChallengeModal: React.FC<ChallengeModalProps> = ({ isOpen, onClose, onStar
             <p>Incorrect answers: -1 point</p>
             <button onClick={handleStart}>Start Challenge</button>
           </>
-        ) : (
+        ) : isActive ? (
           <>
             <p>Time Left: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</p>
             <p>Current Score: {challengeScore}</p>
           </>
+        ) : (
+          <>
+            <h3>Challenge Completed!</h3>
+            <p>Final Score: {challengeScore}</p>
+            <p>Total Questions Attempted: {totalQuestions}</p>
+            <p>Accuracy: {((challengeScore + totalQuestions) / (2 * totalQuestions) * 100).toFixed(2)}%</p>
+            <button onClick={onClose}>Close</button>
+          </>
         )}
-        <button onClick={onClose}>Close</button>
+        {!isCompleted && <button onClick={onClose}>Close</button>}
       </div>
     </div>
   );

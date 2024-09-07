@@ -59,19 +59,112 @@ export const applyRandomRowOperation = (matrix: number[][]): { newMatrix: number
     return randomOperation(matrix);
   };
 
-export const generateOptions = (correctOperation: string): string[] => {
-    const options = [correctOperation];
-    while (options.length < 4) {
-      const i = Math.floor(Math.random() * 3) + 1;
-      let j;
-      do {
-        j = Math.floor(Math.random() * 3) + 1;
-      } while (i === j);
-      const n = Math.floor(Math.random() * 9) + 1;
-      const operation = `R${i} → R${i} + ${n}R${j}`;
-      if (!options.includes(operation)) {
-        options.push(operation);
+export const applyOperation = (matrix: number[][], operation: string): number[][] => {
+  const newMatrix = matrix.map(row => [...row]);
+  const [, rowNum1, op, rowNum2] = operation.match(/R(\d+)\s*([↔→+])\s*(?:(\d+)R(\d+)|R(\d+)|(\d+)R(\d+))?/) || [];
+
+  switch (op) {
+    case '↔': // swap
+      [newMatrix[Number(rowNum1) - 1], newMatrix[Number(rowNum2) - 1]] = 
+      [newMatrix[Number(rowNum2) - 1], newMatrix[Number(rowNum1) - 1]];
+      break;
+    case '→': // multiply
+      const scalar = Number(rowNum2);
+      newMatrix[Number(rowNum1) - 1] = newMatrix[Number(rowNum1) - 1].map(val => val * scalar);
+      break;
+    case '+': // add multiple of another row
+      const [, , , scalar2, sourceRow] = operation.match(/R(\d+)\s*→\s*R\1\s*\+\s*(\d+)R(\d+)/) || [];
+      for (let i = 0; i < newMatrix[0].length; i++) {
+        newMatrix[Number(rowNum1) - 1][i] += Number(scalar2) * newMatrix[Number(sourceRow) - 1][i];
+      }
+      break;
+  }
+
+  return newMatrix;
+};
+
+export const generateOptions = (
+  correctOperation: string,
+  matrixA: number[][],
+  matrixB: number[][]
+): string[] => {
+  const generateRandomOperation = (matrix: number[][]): string => {
+    if (!matrix || matrix.length === 0) {
+      console.error('Invalid matrix provided to generateRandomOperation');
+      return correctOperation; // fallback to correct operation if matrix is invalid
+    }
+
+    const rows = matrix.length;
+    const operationType = Math.floor(Math.random() * 3); // 0: swap, 1: multiply, 2: add multiple
+
+    switch (operationType) {
+      case 0: // swap rows
+        const i = Math.floor(Math.random() * rows);
+        let j;
+        do {
+          j = Math.floor(Math.random() * rows);
+        } while (i === j);
+        return `R${i + 1} ↔ R${j + 1}`;
+
+      case 1: // multiply row by scalar
+        const row = Math.floor(Math.random() * rows);
+        const scalar = Math.floor(Math.random() * 9) + 1; // Random non-zero integer between 1 and 9
+        return `R${row + 1} → ${scalar}R${row + 1}`;
+
+      case 2: // add multiple of one row to another
+        const i2 = Math.floor(Math.random() * rows);
+        let j2;
+        do {
+          j2 = Math.floor(Math.random() * rows);
+        } while (i2 === j2);
+        const n = Math.floor(Math.random() * 9) + 1; // Random non-zero integer between 1 and 9
+        return `R${i2 + 1} → R${i2 + 1} + ${n}R${j2 + 1}`;
+
+      default:
+        return correctOperation; // fallback, should never happen
+    }
+  };
+
+  if (!matrixA || matrixA.length === 0) {
+    console.error('Invalid matrixA provided to generateOptions');
+    return [correctOperation]; // return only the correct operation if matrixA is invalid
+  }
+
+  const selectedOptions = [correctOperation];
+
+  let attempts = 0;
+  const maxAttempts = 100; // Prevent infinite loop
+
+  while (selectedOptions.length < 4 && attempts < maxAttempts) {
+    const randomOperation = generateRandomOperation(matrixA);
+    if (!selectedOptions.includes(randomOperation)) {
+      const resultMatrix = applyOperation(matrixA, randomOperation);
+      if (!matricesEqual(resultMatrix, matrixB)) {
+        selectedOptions.push(randomOperation);
       }
     }
-    return options.sort(() => Math.random() - 0.5); // Shuffle options
-  };
+    attempts++;
+  }
+
+  // If we couldn't generate 4 unique options, fill the rest with dummy options
+  while (selectedOptions.length < 4) {
+    selectedOptions.push(`Dummy Option ${selectedOptions.length + 1}`);
+  }
+
+  // Shuffle the options
+  for (let i = selectedOptions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [selectedOptions[i], selectedOptions[j]] = [selectedOptions[j], selectedOptions[i]];
+  }
+
+  return selectedOptions;
+};
+
+// Helper function to check if two matrices are equal
+const matricesEqual = (matrix1: number[][] | undefined, matrix2: number[][] | undefined): boolean => {
+  if (!matrix1 || !matrix2) return false;
+  if (matrix1.length !== matrix2.length) return false;
+  return matrix1.every((row, i) => 
+    row && matrix2[i] && row.length === matrix2[i].length && row.every((val, j) => val === matrix2[i][j])
+  );
+};

@@ -24,6 +24,8 @@ const App: React.FC = () => {
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isChallengeModalOpen, setIsChallengeModalOpen] = useState<boolean>(false);
   const [isChallengeModeActive, setIsChallengeModeActive] = useState<boolean>(false);
+  const [isChallengeCompleted, setIsChallengeCompleted] = useState<boolean>(false);
+  const [totalQuestionsInChallenge, setTotalQuestionsInChallenge] = useState<number>(0);
   const [challengeDuration, setChallengeDuration] = useState<number>(60);
   const [timeLeft, setTimeLeft] = useState<number>(60);
 
@@ -64,6 +66,7 @@ const App: React.FC = () => {
     setChallengeScore(0);
     setTimeLeft(60);
     setIsChallengeModeActive(false);
+    setIsChallengeCompleted(false);
     setIsChallengeModalOpen(false);
     generateNewChallenge();
     localStorage.removeItem('matrixGameScore'); // Clear saved score
@@ -82,27 +85,28 @@ const App: React.FC = () => {
   }, [isChallengeModeActive, timeLeft]);
 
   const startChallengeMode = (duration: number) => {
-    setPracticeScore(currentScore); // Save current score as practice score
-    setCurrentScore({ correct: 0, incorrect: 0 }); // Reset displayed score
+    setPracticeScore(currentScore);
+    setCurrentScore({ correct: 0, incorrect: 0 });
     setChallengeDuration(duration);
     setTimeLeft(duration);
     setChallengeScore(0);
     setIsChallengeModeActive(true);
+    setTotalQuestionsInChallenge(0);
     generateNewChallenge();
   };
 
   const endChallengeMode = () => {
     setIsChallengeModeActive(false);
-    setIsChallengeModalOpen(false);
-    setCurrentScore(practiceScore); // Restore practice score
+    setIsChallengeCompleted(true);
+    setIsChallengeModalOpen(true);
   };
 
   const generateNewChallenge = () => {
     const newMatrixA = generateRandomMatrix();
-    const { newMatrix, operation } = applyRandomRowOperation(newMatrixA);
+    const { newMatrix: newMatrixB, operation } = applyRandomRowOperation(newMatrixA);
     setMatrixA(newMatrixA);
-    setMatrixB(newMatrix);
-    const newOptions = generateOptions(operation);
+    setMatrixB(newMatrixB);
+    const newOptions = generateOptions(operation, newMatrixA, newMatrixB);
     setOptions(newOptions);
     setCorrectOption(operation);
     setFeedback('Choose an operation to transform Matrix A to Matrix B');
@@ -134,6 +138,10 @@ const App: React.FC = () => {
       playSound(false);
     }
 
+    if (isChallengeModeActive) {
+      setTotalQuestionsInChallenge(prev => prev + 1);
+    }
+
     setTimeout(() => {
       generateNewChallenge();
       setIsAnswered(false);
@@ -155,7 +163,7 @@ const App: React.FC = () => {
   return (
     <div className="App">
       <header>
-        <h1>Matrix <span className="highlight">Mastery</span></h1>
+        <h1>Row <span className="highlight">Operations</span> Challenge</h1>
         <h2>Elementary Row Operations Challenge</h2>
       </header>
       <div className="tab-container">
@@ -175,27 +183,30 @@ const App: React.FC = () => {
       {activeTab === 'game' && (
         <>
           <div className="scoreboard">
-            <div className="score-item">
-              <span className="score-label">Correct:</span>
-              <span className="score-value correct">{currentScore.correct}</span>
-            </div>
-            <div className="score-item">
-              <span className="score-label">Incorrect:</span>
-              <span className="score-value incorrect">{currentScore.incorrect}</span>
-            </div>
-            {isChallengeModeActive && (
+            {!isChallengeModeActive ? (
               <>
                 <div className="score-item">
-                  <span className="score-label">Challenge Score:</span>
-                  <span className="score-value">{challengeScore}</span>
+                  <span className="score-label">Correct:</span>
+                  <span className="score-value correct">{currentScore.correct}</span>
                 </div>
                 <div className="score-item">
-                  <span className="score-label">Time Left:</span>
-                  <span className="score-value">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+                  <span className="score-label">Incorrect:</span>
+                  <span className="score-value incorrect">{currentScore.incorrect}</span>
                 </div>
               </>
+            ) : (
+              <div className="score-item">
+                <span className="score-label">Challenge Score:</span>
+                <span className="score-value">{challengeScore}</span>
+              </div>
             )}
           </div>
+          {isChallengeModeActive && (
+            <div className="timer">
+              <span className="timer-label">Time Left:</span>
+              <span className="timer-value">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+            </div>
+          )}
           <div className="game-controls">
             {!isChallengeModeActive ? (
               <button className="challenge-mode-button" onClick={() => setIsChallengeModalOpen(true)}>Challenge Mode</button>
@@ -230,11 +241,16 @@ const App: React.FC = () => {
           </div>
           <ChallengeModal 
             isOpen={isChallengeModalOpen}
-            onClose={() => setIsChallengeModalOpen(false)}
+            onClose={() => {
+              setIsChallengeModalOpen(false);
+              setIsChallengeCompleted(false);
+            }}
             onStart={startChallengeMode}
             timeLeft={timeLeft}
             challengeScore={challengeScore}
             isActive={isChallengeModeActive}
+            isCompleted={isChallengeCompleted}
+            totalQuestions={totalQuestionsInChallenge}
           />
         </>
       )}
