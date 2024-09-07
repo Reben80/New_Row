@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import './App.css';
+import './globals.css';
 import Matrix from './Matrix';
 import { generateRandomMatrix, applyRandomRowOperation, generateOptions } from './utils';
 import ChallengeModal from './ChallengeModal';
